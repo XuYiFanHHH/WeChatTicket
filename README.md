@@ -7,3 +7,5 @@
 3. 当前服务器py35,django,mysqlclient已安装完成
 
 4. 数据库连接配置请修改configs.example.json,而不用修改settings.py
+
+[![Build Status](https://travis-ci.com/XuYiFanHHH/WeChatTicket.svg?token=GvnMrYy1tquZ6syvYmtc&branch=master)](https://travis-ci.com/XuYiFanHHH/WeChatTicket)
