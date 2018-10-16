@@ -5,3 +5,5 @@
 2. mysql root密码pass
 
 3. 当前服务器py35,django,mysqlclient已安装完成
+
+4. 数据库连接配置请修改configs.example.json,而不用修改settings.py
