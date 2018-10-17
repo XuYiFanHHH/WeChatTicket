@@ -40,6 +40,13 @@ class Activity(models.Model):
         except cls.DoesNotExist:
             raise LogicError('Activity not found')
 
+    @classmethod
+    def get_all_activities(cls):
+        try:
+            return cls.objects.order_by(id)
+        except cls.DoesNotExist:
+            raise LogicError('Activity not found')
+
 
 class Ticket(models.Model):
     student_id = models.CharField(max_length=32, db_index=True)
