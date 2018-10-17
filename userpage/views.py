@@ -1,8 +1,12 @@
+import time
+import datetime
+
 from codex.baseerror import *
 from codex.baseview import APIView
 
 from wechat.models import User
-
+from wechat.models import Activity
+from wechat.models import Ticket
 
 class UserBind(APIView):
 
@@ -11,7 +15,9 @@ class UserBind(APIView):
         input: self.input['student_id'] and self.input['password']
         raise: ValidateError when validating failed
         """
-        raise NotImplementedError('You should implement UserBind.validate_user method')
+        # raise NotImplementedError('You should implement UserBind.validate_user method')
+        # 这咋验证?不是说不检验直接通过吗???
+        return
 
     def get(self):
         self.check_input('openid')
@@ -23,3 +29,52 @@ class UserBind(APIView):
         self.validate_user()
         user.student_id = self.input['student_id']
         user.save()
+
+
+class ActivityDetail(APIView):
+
+    def get(self):
+        """
+        input:  self.input['id'] -------- 活动id
+        """
+        self.check_input('id')
+        activity = Activity.get_by_id(self.input['id'])
+        if not activity.status == 1:
+            raise LogicError("The activity isn't normally published!")
+        return {
+            'name': activity.name,
+            'key': activity.key,
+            'description': activity.description,
+            'startTime': activity.start_time,
+            'endTime': activity.end_time,
+            'place': activity.place,
+            'bookStart': activity.book_start,
+            'bookEnd': activity.book_end,
+            'totalTickets': activity.total_tickets,
+            'picUrl': activity.pic_url,
+            'remainTickets': activity.remain_tickets,
+            'currentTime': (int(time.time())),   # 当前时间的秒级时间戳
+        }
+
+
+class TicketDetail(APIView):
+
+    def get(self):
+        """
+        input:  self.input['openid'] -------- 微信用户OpenID
+                self.input['ticket'] -------- 电子票unique_id
+        """
+        self.check_input('openid')
+        self.check_input('ticket')
+        ticket = Ticket.get_by_unique_id(self.input['ticket'])
+        activity = Activity.get_by_id(ticket.activity_id)
+        return {
+            'activityName': activity.name,
+            'place': activity.place,
+            'activityKey': activity.key,
+            'uniqueId': ticket.unique_id,
+            'startTime': activity.start_time,
+            'endTime': activity.end_time,
+            'currentTime': (int(time.time())),  # 当前时间的秒级时间戳
+            'status': ticket.status,
+        }

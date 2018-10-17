@@ -6,7 +6,6 @@ from codex.baseerror import LogicError
 class User(models.Model):
     open_id = models.CharField(max_length=64, unique=True, db_index=True)
     student_id = models.CharField(max_length=32, unique=True, db_index=True)
-    objects = models.Manager()
 
     @classmethod
     def get_by_openid(cls, openid):
@@ -34,12 +33,33 @@ class Activity(models.Model):
     STATUS_SAVED = 0
     STATUS_PUBLISHED = 1
 
+    @classmethod
+    def get_by_id(cls, search_id):
+        try:
+            return cls.objects.get(id=search_id)
+        except cls.DoesNotExist:
+            raise LogicError('Activity not found')
+
+    @classmethod
+    def get_all_activities(cls):
+        try:
+            return cls.objects.order_by(id)
+        except cls.DoesNotExist:
+            raise LogicError('Activity not found')
+
 
 class Ticket(models.Model):
     student_id = models.CharField(max_length=32, db_index=True)
     unique_id = models.CharField(max_length=64, db_index=True, unique=True)
-    activity = models.ForeignKey(Activity,on_delete=models.CASCADE)
+    activity = models.ForeignKey(Activity)
     status = models.IntegerField()
+
+    @classmethod
+    def get_by_unique_id(cls, search_unique_id):
+        try:
+            return cls.objects.get(unique_id=search_unique_id)
+        except cls.DoesNotExist:
+            raise LogicError('Ticket not found')
 
     STATUS_CANCELLED = 0
     STATUS_VALID = 1
