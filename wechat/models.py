@@ -61,6 +61,10 @@ class Ticket(models.Model):
         except cls.DoesNotExist:
             raise LogicError('Ticket not found')
 
+    @classmethod
+    def count_used_tickets(cls, search_activity_id):
+        return len(cls.objects.filter(activity_id=search_activity_id).filter(status=Ticket.STATUS_USED))
+
     STATUS_CANCELLED = 0
     STATUS_VALID = 1
     STATUS_USED = 2
