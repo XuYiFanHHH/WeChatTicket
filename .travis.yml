@@ -4,8 +4,10 @@ python:
   - "3.5"
 servives:
     - mysql
+env:
+  - DJANGO=1.9.5 DB=mysql
 install:
-    - pip install -r requirement.txt
+    - pip install -r requirements.txt
 before_script:
   - mysql -u root -e 'CREATE DATABASE wechat_ticke;'
 
