@@ -9,6 +9,6 @@ env:
 install:
     - pip install -r requirements.txt
 before_script:
-  - mysql -u root -e 'CREATE DATABASE wechat_ticke;'
+  - mysql -u root -e 'CREATE DATABASE wechat_ticket;'
 
 script: true
