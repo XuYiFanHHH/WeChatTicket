@@ -173,3 +173,6 @@ logging.basicConfig(
     format='%(levelname)-7s [%(asctime)s] %(module)s.%(funcName)s:%(lineno)d  %(message)s',
     level=logging.DEBUG if DEBUG else logging.WARNING,
 )
+
+# 图片文件存储路径
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

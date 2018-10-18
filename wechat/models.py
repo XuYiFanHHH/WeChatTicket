@@ -51,7 +51,7 @@ class Activity(models.Model):
 class Ticket(models.Model):
     student_id = models.CharField(max_length=32, db_index=True)
     unique_id = models.CharField(max_length=64, db_index=True, unique=True)
-    activity = models.ForeignKey(Activity,on_delete=models.CASCADE)
+    activity = models.ForeignKey(Activity)
     status = models.IntegerField()
 
     @classmethod
@@ -60,6 +60,10 @@ class Ticket(models.Model):
             return cls.objects.get(unique_id=search_unique_id)
         except cls.DoesNotExist:
             raise LogicError('Ticket not found')
+
+    @classmethod
+    def count_used_tickets(cls, search_activity_id):
+        return len(cls.objects.filter(activity_id=search_activity_id).filter(status=Ticket.STATUS_USED))
 
     STATUS_CANCELLED = 0
     STATUS_VALID = 1

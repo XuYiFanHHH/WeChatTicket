@@ -1,5 +1,6 @@
 import time
 import datetime
+import re
 
 from codex.baseerror import *
 from codex.baseview import APIView
@@ -7,6 +8,7 @@ from codex.baseview import APIView
 from wechat.models import User
 from wechat.models import Activity
 from wechat.models import Ticket
+
 
 class UserBind(APIView):
 
@@ -16,7 +18,10 @@ class UserBind(APIView):
         raise: ValidateError when validating failed
         """
         # raise NotImplementedError('You should implement UserBind.validate_user method')
-        # 这咋验证?不是说不检验直接通过吗???
+        if not re.match(r'^\d{10}$', self.input['student_id']):
+            raise ValidateError('Invalid student number!')
+        if len(self.input['password']) == 0:
+            raise ValidateError('Invalid password!')
         return
 
     def get(self):
@@ -37,6 +42,7 @@ class ActivityDetail(APIView):
         """
         input:  self.input['id'] -------- 活动id
         """
+        self.check_input('id')
         self.check_input('id')
         activity = Activity.get_by_id(self.input['id'])
         if not activity.status == 1:
@@ -64,8 +70,7 @@ class TicketDetail(APIView):
         input:  self.input['openid'] -------- 微信用户OpenID
                 self.input['ticket'] -------- 电子票unique_id
         """
-        self.check_input('openid')
-        self.check_input('ticket')
+        self.check_input('openid', 'ticket')
         ticket = Ticket.get_by_unique_id(self.input['ticket'])
         activity = Activity.get_by_id(ticket.activity_id)
         return {
@@ -75,6 +80,6 @@ class TicketDetail(APIView):
             'uniqueId': ticket.unique_id,
             'startTime': activity.start_time,
             'endTime': activity.end_time,
-            'currentTime': (int(time.time())),  # 当前时间的秒级时间戳
+            'currentTime': int(time.time()),  # 当前时间的秒级时间戳
             'status': ticket.status,
         }
