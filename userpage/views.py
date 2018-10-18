@@ -48,7 +48,7 @@ class ActivityDetail(APIView):
         if activity.status != 1:
             raise LogicError("The activity isn't normally published!")
         else:
-            temp = {
+            return {
                 'name': activity.name,
                 'key': activity.key,
                 'description': activity.description,
@@ -62,7 +62,6 @@ class ActivityDetail(APIView):
                 'remainTickets': activity.remain_tickets,
                 'currentTime': (int(time.time())),   # 当前时间的秒级时间戳
             }
-            return temp
 
 
 class TicketDetail(APIView):

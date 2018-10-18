@@ -36,15 +36,16 @@ class Activity(models.Model):
     @classmethod
     def get_by_id(cls, search_id):
         try:
-            return cls.objects.get(id=search_id)
+            return cls.objects.get(id=int(search_id))
         except cls.DoesNotExist:
             raise LogicError('Activity not found')
 
     @classmethod
     def get_all_activities(cls):
-        temp = cls.objects.filter(status = 1)
-        temp = cls.objects.all().order_by(id)
 
+        """
+        返回所有活动
+        """
         try:
             return cls.objects.all()
         except cls.DoesNotExist:
@@ -61,6 +62,13 @@ class Ticket(models.Model):
     def get_by_unique_id(cls, search_unique_id):
         try:
             return cls.objects.get(unique_id=search_unique_id)
+        except cls.DoesNotExist:
+            raise LogicError('Ticket not found')
+
+    @classmethod
+    def get_by_activity_and_student_number(cls, act_id, stu_id):
+        try:
+            return cls.objects.filter(activity=Activity.get_by_id(act_id)).filter(student_id=stu_id)
         except cls.DoesNotExist:
             raise LogicError('Ticket not found')
 

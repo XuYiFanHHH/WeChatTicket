@@ -1,6 +1,5 @@
 
-import time
-import datetime
+import time, datetime, timedelta
 import uuid
 from PIL import Image
 from io import BytesIO
@@ -17,6 +16,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.conf import settings
+
+
+def datetime_to_timestamp(date_time):
+    # 将datetime类型的时间转换为时间戳
+    return time.mktime(time.strptime(date_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S'))
+
+
+def UTCtime_to_timestamp(UTC_time):
+    # 将UTC通用标准时转换为时间戳
+    return time.mktime(time.strptime((datetime.datetime.strptime(UTC_time, "%Y-%m-%dT%H:%M:%S.%fZ") + \
+                                               datetime.timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S'))
 
 
 class Login(APIView):
@@ -46,27 +56,16 @@ class Login(APIView):
 
 class Logout(APIView):
 
-    def get(self):
+    def post(self):
         """
         input:  无
                 获取登录状态,已登录返回0,否则返回非0
         """
         if not self.request.user.is_authenticated():
             raise ValidateError("admin-user not login!")
-        return
-
-    def post(self):
-        """
-        input:  self.input['username'] -------- 管理员用户名
-        input:  self.input['password'] -------- 管理员密码
-        """
-        self.check_input('username', 'password')
-        user = authenticate(username=self.input['username'], password=self.input['password'])
-        if user is not None:
-            login(self.request, user)
-            return
         else:
-            raise ValidateError("Login failed!")
+            logout(self.request)
+        return
 
 
 class ActivityList(APIView):
@@ -140,9 +139,9 @@ class ActivityCreate(APIView):
         if not self.request.user.is_authenticated():
             raise ValidateError("admin-user not login!")
         else:
-            new_activity = Activity(name=self.input['name'], key=self.input['key'], description=self.input['description'], pic_url=self.input['picUrl'],\
-                                    start_time=datetime.datetime.fromtimestamp(self.input['startTime']), end_time=datetime.datetime.fromtimestamp(self.input['endTime']),\
-                                    book_start=datetime.datetime.fromtimestamp(self.input['bookStart']), book_end=datetime.datetime.fromtimestamp(self.input['bookEnd']),\
+            new_activity = Activity(name=self.input['name'], key=self.input['key'],place=self.input['place'], description=self.input['description'], pic_url=self.input['picUrl'],\
+                                    start_time=self.input['startTime'], end_time=self.input['endTime'],\
+                                    book_start=self.input['bookStart'], book_end=self.input['bookEnd'],\
                                     total_tickets=self.input['totalTickets'], status=self.input['status'], remain_tickets=self.input['totalTickets'])
             new_activity.save()
             return new_activity.id
@@ -221,79 +220,127 @@ class ActivityDetail(APIView):
         if not self.request.user.is_authenticated():
             raise ValidateError("admin-user not login!")
         else:
+            temp = self.input['startTime']
+
             activity = Activity.get_by_id(self.input['id'])
 
-            activity.id = self.input['id']
-
-            if activity.name != self.input['name']:                         #活动名称需要修改
-                if activity.status == activity.STATUS_PUBLISHED:             #活动已经发布
+            if activity.name != self.input['name']:                         # 活动名称需要修改
+                if activity.status == activity.STATUS_PUBLISHED:             # 活动已经发布
                     raise ValidateError("Can't change activity's name while the activity is published!")
-                else:                                                        #活动尚未发布
+                else:                                                        # 活动尚未发布
                     activity.name = self.input['name']
 
-            if activity.place != self.input['place']:                        #活动地点需要修改
-                if activity.status == activity.STATUS_PUBLISHED:              #活动已经发布
+            if activity.place != self.input['place']:                        # 活动地点需要修改
+                if activity.status == activity.STATUS_PUBLISHED:              # 活动已经发布
                     raise ValidateError("Can't change activity's place while the activity is published!")
-                else:                                                         #活动尚未发布
+                else:                                                         # 活动尚未发布
                     activity.place = self.input['place']
 
-            activity.description = self.input['description']                 #活动描述
+            activity.description = self.input['description']                 # 活动描述
 
-            activity.pic_url = self.input['picUrl']                           #活动配图url
+            activity.pic_url = self.input['picUrl']                           # 活动配图url
 
-            if activity.start_time != self.input['startTime']:                        #活动开始时间需要修改
-                if int(time.time()) <= time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')):
-                                                                               #活动已经结束
+            if datetime_to_timestamp(activity.start_time) != UTCtime_to_timestamp(self.input['startTime']):
+                                                                                # 活动开始时间需要修改
+                if int(time.time()) >= datetime_to_timestamp(activity.end_time):
+                                                                               # 活动已经结束
                     raise ValidateError("Can't change activity's start time while the activity is end!")
-                else:                                                          #活动尚未结束
-                    activity.start_time = datetime.datetime.fromtimestamp(self.input['startTime'])
+                else:                                                          # 活动尚未结束
+                    activity.start_time = UTCtime_to_timestamp(self.input['startTime'])
 
-            if activity.end_time != self.input['endTime']:                        #活动结束时间需要修改
-                if int(time.time()) <= time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')):
-                                                                               #活动已经结束
+            if datetime_to_timestamp(activity.end_time) != UTCtime_to_timestamp(self.input['endTime']):
+                                                                                # 活动结束时间需要修改
+                if int(time.time()) >= datetime_to_timestamp(activity.end_time):
+                                                                               # 活动已经结束
                     raise ValidateError("Can't change activity's end time while the activity is end!")
-                else:                                                          #活动尚未结束
-                    activity.end_time = datetime.datetime.fromtimestamp(self.input['endTime'])
+                else:                                                          # 活动尚未结束
+                    activity.end_time = UTCtime_to_timestamp(self.input['endTime'])
 
-            if activity.book_start != self.input['bookStart']:                        #抢票开始时间需要修改
-                if activity.status == activity.STATUS_PUBLISHED:              #活动已经发布
+            if datetime_to_timestamp(activity.book_start) != UTCtime_to_timestamp(self.input['bookStart']):
+                                                                                # 抢票开始时间需要修改
+                if activity.status == activity.STATUS_PUBLISHED:              # 活动已经发布
                     raise ValidateError("Can't change activity's book start time while the activity is published!")
-                else:                                                         #活动尚未发布
-                    activity.book_start = self.input['bookStart']
+                else:                                                         # 活动尚未发布
+                    activity.book_start = UTCtime_to_timestamp(self.input['bookStart'])
 
-            if activity.book_end != self.input['bookEnd']:                        #抢票结束时间需要修改
-                if int(time.time()) <= time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')):
-                                                                               #活动已经结束
-                    raise ValidateError("Can't change activity's end time while the activity is end!")
-                else:                                                          #活动尚未结束
-                    activity.end_time = datetime.datetime.fromtimestamp(self.input['endTime'])
+            if datetime_to_timestamp(activity.book_end) != UTCtime_to_timestamp(self.input['bookEnd']):
+                                                                                # 抢票结束时间需要修改
+                if int(time.time()) >= datetime_to_timestamp(activity.start_time):
+                                                                               # 活动已经开始
+                    raise ValidateError("Can't change activity's book end time while the activity is end!")
+                else:                                                          # 活动尚未开始
+                    activity.book_end = UTCtime_to_timestamp(self.input['bookEnd'])
 
+            if activity.total_tickets != int(self.input['totalTickets']):          # 总票数需要修改
+                if int(time.time()) >= datetime_to_timestamp(activity.book_start):
+                                                                               # 抢票已经开始
+                    raise ValidateError("Can't change activity's total tickets count while booking is started!")
+                else:                                                          # 抢票尚未开始
+                    activity.total_tickets = int(self.input['totalTickets'])
 
-
-
-
-
-
-
-
-
-            if activity.status != activity.STATUS_PUBLISHED:    # 尚未发布的活动进入修改
-                activity.name = self.input['name']
-                activity.place = self.input['place']
-                activity.book_start = self.input['bookStart']
-            if int(time.time()) <= activity.end_time:           # 尚未结束的活动进入修改
-                activity.start_time = self.input['startTime']
-                activity.end_time = self.input['endTime']
-            if int(time.time()) <= activity.start_time:         # 尚未开始的活动进入修改
-                activity.book_end = self.input['bookEnd']       # ??????
-            if int(time.time()) <= activity.book_start:         # 尚未开始抢票的活动进入修改
-                activity.total_tickets = self.input['totalTickets']
-            if activity.status == activity.STATUS_SAVED:
-                activity.status = self.input['status']
-            elif activity.status == activity.STATUS_PUBLISHED:
-                activity.status = activity.STATUS_PUBLISHED
-            else:
-                raise LogicError("Can't edit deleted activity!")
-            #activity.
+            if activity.status != int(self.input['status']):                         # 活动状态需要修改
+                if activity.status == activity.STATUS_SAVED:                        # 活动是暂存状态
+                    activity.status = int(self.input['status'])                      # 允许更改状态
+                else:
+                    raise ValidateError("Can't change published activity to saved or change deleted activity's status!")
             return
 
+
+class ActivityMenu(APIView):
+
+    def get(self):
+        """
+        input:  空
+                返回可加入菜单的活动对象数组
+                需要登录
+        """
+        if not self.request.user.is_authenticated():
+            raise ValidateError("admin-user not login!")
+        else:
+            result = []
+            activity_list = Activity.get_all_activities()
+            for act in activity_list:
+                if act.status >= 0:
+                    temp = {
+                        'id': act.id,
+                        'name': act.name,
+                        'menuIndex': 0
+                    }
+                    result.append(temp)
+            for ii in range(5):
+                index = ii + 1
+                opposite_index = index * (-1)
+                if result[opposite_index]:
+                    result[opposite_index]['menuIndex'] = index
+
+
+class ActivityCheckin(APIView):
+
+    def post(self):
+
+        """
+        input:  self.input['actId'] -------- 活动ID
+                self.input['ticket'] -------- 电子票ID
+                self.input['studentId'] -------- 学号
+                检票
+                需要登录
+        """
+        if not self.request.user.is_authenticated():
+            raise ValidateError("admin-user not login!")
+        else:
+            self.check_input('actId')
+            result = None
+            if 'ticket' not in self.input:
+                self.check_input('studentId')
+                result = Ticket.get_by_activity_and_student_number(self.input['actId'], self.input['studentId'])
+            elif 'studentId' not in self.input:
+                self.check_input('ticket')
+                result = Ticket.get_by_unique_id(self.input['ticket'])
+            if result:
+                result.status = Ticket.STATUS_USED
+                return {
+                    'ticket': result.unique_id,
+                    'studentId': result.student_id,
+                }
+            else:
+                return LogicError('Ticket not found')
