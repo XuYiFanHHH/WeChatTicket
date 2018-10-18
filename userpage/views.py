@@ -1,6 +1,7 @@
 import time
 import datetime
 import re
+import json
 
 from codex.baseerror import *
 from codex.baseview import APIView
@@ -43,24 +44,25 @@ class ActivityDetail(APIView):
         input:  self.input['id'] -------- 活动id
         """
         self.check_input('id')
-        self.check_input('id')
         activity = Activity.get_by_id(self.input['id'])
-        if not activity.status == 1:
+        if activity.status != 1:
             raise LogicError("The activity isn't normally published!")
-        return {
-            'name': activity.name,
-            'key': activity.key,
-            'description': activity.description,
-            'startTime': activity.start_time,
-            'endTime': activity.end_time,
-            'place': activity.place,
-            'bookStart': activity.book_start,
-            'bookEnd': activity.book_end,
-            'totalTickets': activity.total_tickets,
-            'picUrl': activity.pic_url,
-            'remainTickets': activity.remain_tickets,
-            'currentTime': (int(time.time())),   # 当前时间的秒级时间戳
-        }
+        else:
+            temp = {
+                'name': activity.name,
+                'key': activity.key,
+                'description': activity.description,
+                'startTime': time.mktime(time.strptime(activity.start_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                'endTime': time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                'place': activity.place,
+                'bookStart': time.mktime(time.strptime(activity.book_start.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                'bookEnd': time.mktime(time.strptime(activity.book_end.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                'totalTickets': activity.total_tickets,
+                'picUrl': activity.pic_url,
+                'remainTickets': activity.remain_tickets,
+                'currentTime': (int(time.time())),   # 当前时间的秒级时间戳
+            }
+            return temp
 
 
 class TicketDetail(APIView):
@@ -78,8 +80,8 @@ class TicketDetail(APIView):
             'place': activity.place,
             'activityKey': activity.key,
             'uniqueId': ticket.unique_id,
-            'startTime': activity.start_time,
-            'endTime': activity.end_time,
+            'startTime': time.mktime(time.strptime(activity.start_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+            'endTime': time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
             'currentTime': int(time.time()),  # 当前时间的秒级时间戳
             'status': ticket.status,
         }

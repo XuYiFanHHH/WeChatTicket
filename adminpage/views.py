@@ -88,11 +88,11 @@ class ActivityList(APIView):
                         'id': act.id,
                         'name': act.name,
                         'description': act.description,
-                        'startTime': act.start_time,
-                        "endTime": act.end_time,
+                        'startTime': time.mktime(time.strptime(act.start_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                        "endTime": time.mktime(time.strptime(act.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
                         'place': act.place,
-                        'bookStart': act.book_start,
-                        'bookEnd': act.book_end,
+                        'bookStart': time.mktime(time.strptime(act.book_start.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                        'bookEnd': time.mktime(time.strptime(act.book_end.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
                         'currentTime': int(time.time()),  # 当前时间的秒级时间戳
                         'status': act.status,
                     }
@@ -141,8 +141,9 @@ class ActivityCreate(APIView):
             raise ValidateError("admin-user not login!")
         else:
             new_activity = Activity(name=self.input['name'], key=self.input['key'], description=self.input['description'], pic_url=self.input['picUrl'],\
-                                   start_time=self.input['startTime'], end_time=self.input['endTime'], book_start=self.input['bookStart'],\
-                                   book_end=self.input['bookEnd'], total_tickets=self.input['totalTickets'], status=self.input['status'])
+                                    start_time=datetime.datetime.fromtimestamp(self.input['startTime']), end_time=datetime.datetime.fromtimestamp(self.input['endTime']),\
+                                    book_start=datetime.datetime.fromtimestamp(self.input['bookStart']), book_end=datetime.datetime.fromtimestamp(self.input['bookEnd']),\
+                                    total_tickets=self.input['totalTickets'], status=self.input['status'], remain_tickets=self.input['totalTickets'])
             new_activity.save()
             return new_activity.id
 
@@ -186,11 +187,11 @@ class ActivityDetail(APIView):
                 'name': activity.name,
                 'key': activity.key,
                 'description': activity.description,
-                'startTime': activity.start_time,
-                'endTime': activity.end_time,
+                'startTime': time.mktime(time.strptime(activity.start_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                'endTime': time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
                 'place': activity.place,
-                'bookStart': activity.book_start,
-                'bookEnd': activity.book_end,
+                'bookStart': time.mktime(time.strptime(activity.book_start.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
+                'bookEnd': time.mktime(time.strptime(activity.book_end.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')),
                 'totalTickets': activity.total_tickets,
                 'picUrl': activity.pic_url,
                 'bookedTickets': activity.total_tickets - activity.remain_tickets,
@@ -202,13 +203,13 @@ class ActivityDetail(APIView):
     def post(self):
         """
         input:  self.input['id'] -------- 活动id
-                qself.input['name'] -------- 活动名称
-                qself.input['place'] -------- 活动地点
-                qself.input['description'] -------- 活动描述
-                qself.input['picUrl'] -------- 活动配图url
+                self.input['name'] -------- 活动名称
+                self.input['place'] -------- 活动地点
+                self.input['description'] -------- 活动描述
+                self.input['picUrl'] -------- 活动配图url
                 self.input['startTime'] -------- 活动开始时间
                 self.input['endTime'] -------- 活动结束时间
-                qself.input['bookStart'] -------- 抢票开始时间
+                self.input['bookStart'] -------- 抢票开始时间
                 self.input['bookEnd'] -------- 抢票结束时间
                 self.input['totalTickets'] -------- 总票数
                 self.input['status'] -------- 暂存或发布
@@ -221,8 +222,61 @@ class ActivityDetail(APIView):
             raise ValidateError("admin-user not login!")
         else:
             activity = Activity.get_by_id(self.input['id'])
-            activity.description = self.input['description']
-            activity.pic_url = self.input['picUrl']
+
+            activity.id = self.input['id']
+
+            if activity.name != self.input['name']:                         #活动名称需要修改
+                if activity.status == activity.STATUS_PUBLISHED:             #活动已经发布
+                    raise ValidateError("Can't change activity's name while the activity is published!")
+                else:                                                        #活动尚未发布
+                    activity.name = self.input['name']
+
+            if activity.place != self.input['place']:                        #活动地点需要修改
+                if activity.status == activity.STATUS_PUBLISHED:              #活动已经发布
+                    raise ValidateError("Can't change activity's place while the activity is published!")
+                else:                                                         #活动尚未发布
+                    activity.place = self.input['place']
+
+            activity.description = self.input['description']                 #活动描述
+
+            activity.pic_url = self.input['picUrl']                           #活动配图url
+
+            if activity.start_time != self.input['startTime']:                        #活动开始时间需要修改
+                if int(time.time()) <= time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')):
+                                                                               #活动已经结束
+                    raise ValidateError("Can't change activity's start time while the activity is end!")
+                else:                                                          #活动尚未结束
+                    activity.start_time = datetime.datetime.fromtimestamp(self.input['startTime'])
+
+            if activity.end_time != self.input['endTime']:                        #活动结束时间需要修改
+                if int(time.time()) <= time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')):
+                                                                               #活动已经结束
+                    raise ValidateError("Can't change activity's end time while the activity is end!")
+                else:                                                          #活动尚未结束
+                    activity.end_time = datetime.datetime.fromtimestamp(self.input['endTime'])
+
+            if activity.book_start != self.input['bookStart']:                        #抢票开始时间需要修改
+                if activity.status == activity.STATUS_PUBLISHED:              #活动已经发布
+                    raise ValidateError("Can't change activity's book start time while the activity is published!")
+                else:                                                         #活动尚未发布
+                    activity.book_start = self.input['bookStart']
+
+            if activity.book_end != self.input['bookEnd']:                        #抢票结束时间需要修改
+                if int(time.time()) <= time.mktime(time.strptime(activity.end_time.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')):
+                                                                               #活动已经结束
+                    raise ValidateError("Can't change activity's end time while the activity is end!")
+                else:                                                          #活动尚未结束
+                    activity.end_time = datetime.datetime.fromtimestamp(self.input['endTime'])
+
+
+
+
+
+
+
+
+
+
             if activity.status != activity.STATUS_PUBLISHED:    # 尚未发布的活动进入修改
                 activity.name = self.input['name']
                 activity.place = self.input['place']
@@ -240,5 +294,6 @@ class ActivityDetail(APIView):
                 activity.status = activity.STATUS_PUBLISHED
             else:
                 raise LogicError("Can't edit deleted activity!")
+            #activity.
             return
 

@@ -42,8 +42,11 @@ class Activity(models.Model):
 
     @classmethod
     def get_all_activities(cls):
+        temp = cls.objects.filter(status = 1)
+        temp = cls.objects.all().order_by(id)
+
         try:
-            return cls.objects.order_by(id)
+            return cls.objects.all()
         except cls.DoesNotExist:
             raise LogicError('Activity not found')
 
