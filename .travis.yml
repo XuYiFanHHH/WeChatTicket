@@ -9,6 +9,6 @@ env:
 install:
     - pip install -r requirements.txt
 before_script:
-  - mysql -u root -e 'CREATE DATABASE wechat_ticket;'
+  - mysql -u root -e 'CREATE DATABASE wechat_ticket DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;'
 
 script: python3 manage.py test
