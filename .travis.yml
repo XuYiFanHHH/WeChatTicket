@@ -5,10 +5,8 @@ python:
 servives:
     - mysql
 env:
-  - DJANGO=1.9.5 DB=mysql
+  - DJANGO=1.9.5
 install:
     - pip install -r requirements.txt
-before_script:
-  - mysql -u root -e 'CREATE DATABASE wechat_ticket DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;'
 
 script: python3 manage.py test
