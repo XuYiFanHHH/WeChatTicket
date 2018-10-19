@@ -72,7 +72,6 @@ templates/
 /
 requirements.txt
 manage.py
-configs.example.json
 README.md
 LICENSE
 .gitignore
