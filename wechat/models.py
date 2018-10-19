@@ -1,6 +1,6 @@
 from django.db import models
 
-from codex.baseerror import LogicError
+from codex.baseerror import *
 
 
 class User(models.Model):
@@ -75,6 +75,16 @@ class Ticket(models.Model):
     @classmethod
     def count_used_tickets(cls, search_activity_id):
         return len(cls.objects.filter(activity_id=search_activity_id).filter(status=Ticket.STATUS_USED))
+
+    @classmethod
+    def get_user_tickets(cls, student_id):
+        """
+        返回此用户的所有票
+        """
+        try:
+            return cls.objects.all().filter(student_id=student_id)
+        except cls.DoesNotExist:
+            raise LogicError('Activity not found')
 
     STATUS_CANCELLED = 0
     STATUS_VALID = 1
