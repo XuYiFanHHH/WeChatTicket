@@ -1,5 +1,5 @@
 sudo: false
-language: python sudo
+language: python
 python:
   - "3.5"
 servives:
@@ -7,7 +7,7 @@ servives:
 env:
   - DJANGO=1.9.5 DB=mysql
 install:
-    - sudo pip install -r requirements.txt
+    - pip install -r requirements.txt
 before_script:
   - mysql -u root -e 'CREATE DATABASE wechat_ticket;'
 
