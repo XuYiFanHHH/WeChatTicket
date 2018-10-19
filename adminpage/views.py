@@ -1,4 +1,4 @@
-import time, datetime, timedelta
+import time, datetime
 import uuid
 from PIL import Image
 from io import BytesIO
