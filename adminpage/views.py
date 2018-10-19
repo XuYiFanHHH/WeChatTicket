@@ -351,6 +351,8 @@ class ActivityCheckin(APIView):
             if 'ticket' not in self.input:
                 self.check_input('studentId')
                 result = Ticket.get_by_activity_and_student_number(self.input['actId'], self.input['studentId'])
+                if result:
+                    result = result[0]
             elif 'studentId' not in self.input:
                 self.check_input('ticket')
                 result = Ticket.get_by_unique_id(self.input['ticket'])
