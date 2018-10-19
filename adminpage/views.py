@@ -11,6 +11,7 @@ from wechat.views import CustomWeChatView
 from wechat.models import User
 from wechat.models import Activity
 from wechat.models import Ticket
+import WeChatTicket.settings
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -140,7 +141,8 @@ class ActivityCreate(APIView):
         if not self.request.user.is_authenticated():
             raise ValidateError("admin-user not login!")
         else:
-            new_activity = Activity(name=self.input['name'], key=self.input['key'],place=self.input['place'], description=self.input['description'], pic_url=self.input['picUrl'],\
+            new_activity = Activity(name=self.input['name'], key=self.input['key'],place=self.input['place'],\
+                                    description=self.input['description'], pic_url=self.input['picUrl'].replace(settings.MEDIA_SAVE_ROOT, settings.MEDIA_ROOT),\
                                     start_time=self.input['startTime'], end_time=self.input['endTime'],\
                                     book_start=self.input['bookStart'], book_end=self.input['bookEnd'],\
                                     total_tickets=self.input['totalTickets'], status=self.input['status'], remain_tickets=self.input['totalTickets'])
@@ -162,7 +164,7 @@ class ImageUpload(APIView):
         else:
             img = self.input['image']
             img = img[0]
-            image_path = '%s\%s%s%s' % (settings.MEDIA_ROOT, str(int(round(time.time() * 1000))), str(uuid.uuid1()), img.name)
+            image_path = '%s\%s%s%s' % (settings.MEDIA_SAVE_ROOT, str(int(round(time.time() * 1000))), str(uuid.uuid1()), img.name)
             file = img.file
             image = Image.open(file)
             image.save(image_path)
@@ -239,7 +241,8 @@ class ActivityDetail(APIView):
 
             activity.description = self.input['description']                 # 活动描述
 
-            activity.pic_url = self.input['picUrl']                           # 活动配图url
+            activity.pic_url = self.input['picUrl'].replace(settings.MEDIA_SAVE_ROOT, settings.MEDIA_ROOT)
+                                                                                # 活动配图url
 
             if datetime_to_timestamp(activity.start_time) != UTCtime_to_timestamp(self.input['startTime']):
                                                                                 # 活动开始时间需要修改
@@ -284,7 +287,8 @@ class ActivityDetail(APIView):
                     activity.status = int(self.input['status'])                      # 允许更改状态
                 else:
                     raise ValidateError("Can't change published activity to saved or change deleted activity's status!")
-            return
+            activity.save()
+        return
 
 
 class ActivityMenu(APIView):
@@ -333,6 +337,9 @@ class ActivityMenu(APIView):
 
 
 class ActivityCheckin(APIView):
+
+    def get(self):
+        return
 
     def post(self):
 

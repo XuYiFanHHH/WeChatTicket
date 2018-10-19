@@ -38,7 +38,7 @@ WECHAT_TOKEN = CONFIGS['WECHAT_TOKEN']
 WECHAT_APPID = CONFIGS['WECHAT_APPID']
 WECHAT_SECRET = CONFIGS['WECHAT_SECRET']
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -175,4 +175,5 @@ logging.basicConfig(
 )
 
 # 图片文件存储路径
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_SAVE_ROOT = os.path.join(BASE_DIR, r'static\u\activity_imgs')
+MEDIA_ROOT = 'activity_imgs'
