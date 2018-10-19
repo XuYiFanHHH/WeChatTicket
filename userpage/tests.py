@@ -93,7 +93,7 @@ class ActivityInfoTest(TestCase):
     def test_activity_info_success(self):
         response = self.client.get('/api/u/activity/detail', {'id': self.id_success})
         self.assertEqual(json.loads(response.content.decode())['code'], 0)
-        self.assertEqual(json.loads(response.content.decode())['data']['name'], '玩玩')
+        self.assertEqual(json.loads(response.content.decode())['data']['place'], 'THU ')
         self.assertEqual(json.loads(response.content.decode())['data']['remainTickets'], 10)
 
     # 测试获取非已发布状态活动的详情
