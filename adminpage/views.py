@@ -162,7 +162,7 @@ class ImageUpload(APIView):
         else:
             img = self.input['image']
             img = img[0]
-            image_path = '%s\%s%s%s' % (settings.MEDIA_ROOT, str(int(round(time.time() * 1000))), str(uuid.uuid1()), img.name)
+            image_path = '%s/%s%s%s' % (settings.MEDIA_SAVE_ROOT, str(int(round(time.time() * 1000))), str(uuid.uuid1()), img.name)
             file = img.file
             image = Image.open(file)
             image.save(image_path)
