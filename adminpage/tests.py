@@ -298,8 +298,6 @@ class TestActivityMenu(TestCase):
                                                book_start='2018-11-02T08:00:00.000Z',
                                                book_end='2018-11-02T10:00:00.000Z',
                                                total_tickets=100, pic_url='xxx', remain_tickets=100, status=1)
-            if i > 3:
-                act.status = 0
         self.client.post('/api/a/logout', {'test':''})
         self.id_array = [activity.id for activity in Activity.objects.all()]
     #测试路由-get
