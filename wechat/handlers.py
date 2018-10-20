@@ -69,7 +69,7 @@ class UnbindOrUnsubscribeHandler(WeChatHandler):
 class BindAccountHandler(WeChatHandler):
 
     def check(self):
-        return self.is_text('绑定') or self.is_event_click(self.view.event_keys['account_bind'])
+        return self.is_text('绑定') or self.is_event_click(self.view.event_keys['account_bind']) or len(self.user.student_id) == 0
 
     def handle(self):
         return self.reply_text(self.get_message('bind_account'))
@@ -78,7 +78,7 @@ class BindAccountHandler(WeChatHandler):
 class BookEmptyHandler(WeChatHandler):
 
     def check(self):
-        return self.is_event_click(self.view.event_keys['book_empty'])
+        return self.is_event_click(self.view.event_keys['book_empty']) and len(self.user.student_id) != 0
 
     def handle(self):
         return self.reply_text(self.get_message('book_empty'))
@@ -87,7 +87,7 @@ class BookEmptyHandler(WeChatHandler):
 class BookListHandler(WeChatHandler):
 
     def check(self):
-        return self.is_text('抢啥') or self.is_event_click(self.view.event_keys['book_what'])
+        return (self.is_text('抢啥') or self.is_event_click(self.view.event_keys['book_what'])) and len(self.user.student_id) != 0
 
     def handle(self):
         all_activities = Activity.get_all_activities().order_by('book_start')
@@ -107,7 +107,7 @@ class BookListHandler(WeChatHandler):
 class TicketBookHandler(WeChatHandler):
 
     def check(self):
-        return self.is_text_command('抢票') or (self.is_msg_type('event') and re.match(r'^BOOKING_ACTIVITY_', self.input['EventKey']))
+        return (self.is_text_command('抢票') or (self.is_msg_type('event') and re.match(r'^BOOKING_ACTIVITY_', self.input['EventKey']))) and len(self.user.student_id) != 0
 
     def handle(self):
         if self.is_msg_type('text'):
@@ -149,6 +149,12 @@ class TicketBookHandler(WeChatHandler):
             if not activity:
                 return self.reply_text('找不到此活动Orz')
             my_ticket = Ticket.get_by_activity_and_student_number(activity.id, self.user.student_id)
+            temp = []
+            for tic in my_ticket:
+                temp.append(tic)
+            my_ticket = temp
+            while len(my_ticket) > 0 and my_ticket[0].status != Ticket.STATUS_VALID:
+                my_ticket.pop(0)
             if len(my_ticket) == 0:
                 if activity.remain_tickets > 0:
                     activity.remain_tickets = activity.remain_tickets - 1
@@ -176,7 +182,7 @@ class TicketBookHandler(WeChatHandler):
 class TicketDetailHandler(WeChatHandler):
 
     def check(self):
-        return self.is_text_command('取票') or self.is_event_click(self.view.event_keys['get_ticket'])
+        return (self.is_text_command('取票') or self.is_event_click(self.view.event_keys['get_ticket'])) and len(self.user.student_id) != 0
 
     def handle(self):
         if self.is_msg_type('text'):
@@ -211,7 +217,7 @@ class TicketDetailHandler(WeChatHandler):
             my_ticket = Ticket.get_by_activity_and_student_number(activity.id, self.user.student_id)
             if len(my_ticket) == 0:
                 return self.reply_text('您还没有此活动的票！Ծ‸Ծ')
-            valid_ticket=None
+            valid_ticket = None
             for tic in my_ticket:
                 if tic.status == Ticket.STATUS_VALID:
                     valid_ticket = tic
@@ -241,7 +247,7 @@ class TicketDetailHandler(WeChatHandler):
 class TicketReturnHandler(WeChatHandler):
 
     def check(self):
-        return self.is_text_command('退票')
+        return (self.is_text_command('退票')) and len(self.user.student_id) != 0
 
     def handle(self):
         content = (self.input['Content'].split() or [None, None])[1]
@@ -283,8 +289,8 @@ class TicketReturnHandler(WeChatHandler):
             if not my_ticket:
                 return self.reply_text('退票失败，您没有此次活动的电子票！|･ω･｀)')
             else:
-                my_ticket.status = Ticket.STATUS_CANCELLED
-                my_ticket.save()
+                valid_ticket.status = Ticket.STATUS_CANCELLED
+                valid_ticket.save()
                 activity.remain_tickets = activity.remain_tickets + 1
                 activity.save()
-                return self.reply_text('活动 [' + activity.name +  '] 退票成功！')
+                return self.reply_text('活动 [' + activity.name + '] 退票成功！')
