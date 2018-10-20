@@ -344,6 +344,7 @@ class TestActivityMenu(TestCase):
     def test_logged_modify(self):
         self.client.post('/api/a/login', {'username': 'llp16', 'password': '666'})
         response = self.client.post('/api/a/activity/menu', self.id_array, content_type='application/json')
+        print('test_logged_modify: ', str(response.content))
         self.assertEqual(json.loads(response.content.decode())['code'], 0)
 
 class TestActivityCheckin(TestCase):
