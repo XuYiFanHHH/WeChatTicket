@@ -355,19 +355,30 @@ class ActivityCheckin(APIView):
         else:
             self.check_input('actId')
             result = None
+            valid_ticket = None
             if 'ticket' not in self.input:
                 self.check_input('studentId')
                 result = Ticket.get_by_activity_and_student_number(self.input['actId'], self.input['studentId'])
-                if result:
-                    result = result[0]
+                if len(result) > 0:
+                    for tic in result:
+                        if tic.status == Ticket.STATUS_VALID:
+                            valid_ticket = tic
+                if not valid_ticket:
+                    raise LogicError("The user don't have valid ticket!")
             elif 'studentId' not in self.input:
                 self.check_input('ticket')
                 result = Ticket.get_by_unique_id(self.input['ticket'])
-            if result:
-                result.status = Ticket.STATUS_USED
+                if result.status == Ticket.STATUS_VALID:
+                    valid_ticket = result
+                else:
+                    raise LogicError("The ticket is not valid!")
+
+            if valid_ticket:
+                valid_ticket.status = Ticket.STATUS_USED
+                valid_ticket.save()
                 return {
-                    'ticket': result.unique_id,
-                    'studentId': result.student_id,
+                    'ticket': valid_ticket.unique_id,
+                    'studentId': valid_ticket.student_id,
                 }
             else:
                 return LogicError('Ticket not found')
