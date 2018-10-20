@@ -106,13 +106,19 @@ class BookListHandler(WeChatHandler):
 
 class TicketBookHandler(WeChatHandler):
 
-    def check(self):
-        return (self.is_text_command('抢票') or (self.is_msg_type('event') and re.match(r'^BOOKING_ACTIVITY_', self.input['EventKey']))) and len(self.user.student_id) != 0
+    STATUS_VALID = 0
+    STATUS_NO_ACTIVITY = 1
+    STATUS_NO_TICKET = 2
+    STATUS_HAS_GOT = 3
 
-    def handle(self):
+    def status(self):
         if self.is_msg_type('text'):
             # 通过抢票命令进入
-            search = (self.input['Content'].split() or [None, None])[1]
+            search = self.input['Content'].split()
+            if len(search) == 1:
+                return self.reply_text('找不到此活动Orz')
+            else:
+                search = search[1]
             # 在name字段匹配
             if search is not None:
                 activity_1 = Activity.get_all_activities()
@@ -138,6 +144,76 @@ class TicketBookHandler(WeChatHandler):
             elif activity_2:
                 activity = activity_2
             else:
+                return self.STATUS_NO_ACTIVITY
+
+        elif self.is_msg_type('event'):
+            activity_id = int(self.input['EventKey'].replace(self.view.event_keys['book_header'], ''))
+            try:
+                activity = Activity.get_by_id(activity_id)
+            except LogicError:
+                return self.STATUS_NO_ACTIVITY
+            if not activity:
+                return self.STATUS_NO_ACTIVITY
+
+            # 此时activity必定存在
+        my_ticket = Ticket.get_by_activity_and_student_number(activity.id, self.user.student_id)
+        temp = []
+        for tic in my_ticket:
+            temp.append(tic)
+        my_ticket = temp
+        while len(my_ticket) > 0 and my_ticket[0].status != Ticket.STATUS_VALID:
+            my_ticket.pop(0)
+        if len(my_ticket) == 0:
+            if activity.remain_tickets > 0:
+                activity.remain_tickets = activity.remain_tickets - 1
+                activity.save()
+                unique = '%s%s' % (str(int(round(time.time() * 1000))), str(uuid.uuid1()))
+                ticket = Ticket(student_id=self.user.student_id, unique_id=unique, status=Ticket.STATUS_VALID,
+                                activity=activity)
+                ticket.save()
+                return self.STATUS_VALID
+            else:
+                return self.STATUS_NO_TICKET
+        else:
+            return self.STATUS_HAS_GOT
+
+    def check(self):
+        return (self.is_text_command('抢票') or (self.is_msg_type('event') and re.match(r'^BOOKING_ACTIVITY_', self.input['EventKey']))) and len(self.user.student_id) != 0
+
+    def handle(self):
+        if self.is_msg_type('text'):
+            # 通过抢票命令进入
+            search = self.input['Content'].split()
+            if len(search) == 1:
+                return self.reply_text('找不到此活动Orz')
+            else:
+                search = search[1]
+            # 在name字段匹配
+            if search is not None:
+                activity_1 = Activity.get_all_activities()
+                if activity_1:
+                    activity_1 = activity_1.filter(name=search)
+                if activity_1 and len(activity_1) > 0:
+                    activity_1 = activity_1[0]
+                else:
+                    activity_1 = None
+
+            # 在key字段匹配
+            if search is not None:
+                activity_2 = Activity.get_all_activities()
+                if activity_2:
+                    activity_2 = activity_2.filter(name=search)
+                if activity_2 and len(activity_2) > 0:
+                    activity_2 = activity_2[0]
+                else:
+                    activity_2 = None
+
+            if activity_1:
+                activity = activity_1
+            elif activity_2:
+                activity = activity_2
+            else:
+                # STATUS_NO_ACTIVITY
                 return self.reply_text('找不到此活动Orz')
 
         elif self.is_msg_type('event'):
@@ -145,8 +221,10 @@ class TicketBookHandler(WeChatHandler):
             try:
                 activity = Activity.get_by_id(activity_id)
             except LogicError:
+                # STATUS_NO_ACTIVITY
                 return self.reply_text('找不到此活动Orz')
             if not activity:
+                # STATUS_NO_ACTIVITY
                 return self.reply_text('找不到此活动Orz')
 
         # 此时activity必定存在
@@ -165,6 +243,7 @@ class TicketBookHandler(WeChatHandler):
                 ticket = Ticket(student_id=self.user.student_id, unique_id=unique, status=Ticket.STATUS_VALID,
                                 activity=activity)
                 ticket.save()
+                # STATUS_NO_VALID
                 return self.reply_single_news({
                     'Title': '[' + activity.name + '] 抢票成功！',
                     'Description': '活动名称：' + activity.name + '\n活动代称：' + activity.key + '\n请于活动开始时前往现场使用，您可以通过 [查票] 菜单查询电子票、或发送 [取票/退票 活动名称或代称] 查询或退票(・◇・)',
@@ -174,6 +253,7 @@ class TicketBookHandler(WeChatHandler):
                 return self.reply_text('此活动的电子票已经全部发出，没有抢到QwQ')
         else:
             my_ticket = my_ticket[0]
+            # STATUS_HAS_GOT
             return self.reply_single_news({
                 'Title': '[' + activity.name + '] 电子票',
                 'Description': '活动名称：' + activity.name + '\n活动代称：' + activity.key,
@@ -189,7 +269,11 @@ class TicketDetailHandler(WeChatHandler):
     def handle(self):
         if self.is_msg_type('text'):
             # 通过取票命令进入
-            search = (self.input['Content'].split() or [None, None])[1]
+            search = self.input['Content'].split()
+            if len(search) == 1:
+                return self.reply_text('找不到此活动Orz')
+            else:
+                search = search[1]
             # 在name字段匹配
             if search is not None:
                 activity_1 = Activity.get_all_activities()
@@ -247,15 +331,72 @@ class TicketDetailHandler(WeChatHandler):
             return self.reply_news(result)
         return
 
+
 class TicketReturnHandler(WeChatHandler):
+
+    STATUS_VALID = 0
+    STATUS_NO_ACTIVITY = 1
+    STATUS_NO_TICKET = 2
+    STATUS_NOT_LEGAL = 3
+    STATUS_NOT_FIND = 4
+
+    def status(self):
+        content = self.input['Content'].split()
+        if len(content) == 1:
+            return self.STATUS_NOT_FIND
+        else:
+            content = content[1]
+        if content is not None:
+            # 在name字段匹配
+            activity_1 = Activity.get_all_activities()
+            if activity_1:
+                activity_1 = activity_1.filter(name=content)
+            if activity_1 and len(activity_1) > 0:
+                activity_1 = activity_1[0]
+            else:
+                activity_1 = None
+
+            # 在key字段匹配
+            activity_2 = Activity.get_all_activities()
+            if activity_2:
+                activity_2 = activity_2.filter(name=content)
+            if activity_2 and len(activity_2) > 0:
+                activity_2 = activity_2[0]
+            else:
+                activity_2 = None
+
+            if activity_1:
+                activity = activity_1
+            elif activity_2:
+                activity = activity_2
+            else:
+                return self.STATUS_NO_ACTIVITY
+
+            my_ticket = Ticket.get_by_activity_and_student_number(activity.id, self.user.student_id)
+            valid_ticket = None
+            for tic in my_ticket:
+                if tic.status == Ticket.STATUS_VALID:
+                    valid_ticket = tic
+            if not my_ticket:
+                return self.STATUS_NO_TICKET
+            if not valid_ticket:
+                return self.STATUS_NOT_LEGAL
+            else:
+                valid_ticket.status = Ticket.STATUS_CANCELLED
+                valid_ticket.save()
+                activity.remain_tickets = activity.remain_tickets + 1
+                activity.save()
+                return self.STATUS_VALID
 
     def check(self):
         return (self.is_text_command('退票')) and len(self.user.student_id) != 0
 
     def handle(self):
-        content = (self.input['Content'].split() or [None, None])[1]
-        if not content:
+        content = self.input['Content'].split()
+        if len(content) == 1:
             return self.reply_text('退票失败，找不到需要退票的活动_(:з」∠)_')
+        else:
+            content = content[1]
         if content is not None:
             # 在name字段匹配
             activity_1 = Activity.get_all_activities()
@@ -287,10 +428,10 @@ class TicketReturnHandler(WeChatHandler):
             for tic in my_ticket:
                 if tic.status == Ticket.STATUS_VALID:
                     valid_ticket = tic
-            if not valid_ticket:
-                return self.reply_text('退票失败，您没有此次活动的合法电子票！|･ω･｀)')
             if not my_ticket:
                 return self.reply_text('退票失败，您没有此次活动的电子票！|･ω･｀)')
+            if not valid_ticket:
+                return self.reply_text('退票失败，您没有此次活动的合法电子票！|･ω･｀)')
             else:
                 valid_ticket.status = Ticket.STATUS_CANCELLED
                 valid_ticket.save()
