@@ -337,7 +337,7 @@ class TestActivityMenu(TestCase):
 
     #测试未登录修改菜单
     def test_not_logged_modify(self):
-        response = self.client.post('/api/a/activity/menu', self.id_array, content_type='application/json')
+        response = self.client.post('/api/a/activity/menu', self.id_array[:5], content_type='application/json')
         self.assertNotEqual(json.loads(response.content.decode())['code'], 0)
 
     #测试已登录修改菜单
