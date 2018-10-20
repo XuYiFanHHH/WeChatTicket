@@ -148,35 +148,37 @@ class TicketBookHandler(WeChatHandler):
                 return self.reply_text('找不到此活动Orz')
             if not activity:
                 return self.reply_text('找不到此活动Orz')
-            my_ticket = Ticket.get_by_activity_and_student_number(activity.id, self.user.student_id)
-            temp = []
-            for tic in my_ticket:
-                temp.append(tic)
-            my_ticket = temp
-            while len(my_ticket) > 0 and my_ticket[0].status != Ticket.STATUS_VALID:
-                my_ticket.pop(0)
-            if len(my_ticket) == 0:
-                if activity.remain_tickets > 0:
-                    activity.remain_tickets = activity.remain_tickets - 1
-                    activity.save()
-                    unique = '%s%s' % (str(int(round(time.time() * 1000))), str(uuid.uuid1()))
-                    ticket = Ticket(student_id=self.user.student_id, unique_id=unique, status=Ticket.STATUS_VALID,
-                                    activity=activity)
-                    ticket.save()
-                    return self.reply_single_news({
-                        'Title': '[' + activity.name + '] 抢票成功！',
-                        'Description': '活动名称：' + activity.name + '\n活动代称：' + activity.key + '\n请于活动开始时前往现场使用，您可以通过 [查票] 菜单查询电子票、或发送 [取票/退票 活动名称或代称] 查询或退票(・◇・)',
-                        'Url': self.url_ticket_detail(ticket.unique_id),
-                    })
-                else:
-                    return self.reply_text('此活动的电子票已经全部发出，没有抢到QwQ')
-            else:
-                my_ticket = my_ticket[0]
+
+        # 此时activity必定存在
+        my_ticket = Ticket.get_by_activity_and_student_number(activity.id, self.user.student_id)
+        temp = []
+        for tic in my_ticket:
+            temp.append(tic)
+        my_ticket = temp
+        while len(my_ticket) > 0 and my_ticket[0].status != Ticket.STATUS_VALID:
+            my_ticket.pop(0)
+        if len(my_ticket) == 0:
+            if activity.remain_tickets > 0:
+                activity.remain_tickets = activity.remain_tickets - 1
+                activity.save()
+                unique = '%s%s' % (str(int(round(time.time() * 1000))), str(uuid.uuid1()))
+                ticket = Ticket(student_id=self.user.student_id, unique_id=unique, status=Ticket.STATUS_VALID,
+                                activity=activity)
+                ticket.save()
                 return self.reply_single_news({
-                    'Title': '[' + activity.name + '] 电子票',
-                    'Description': '活动名称：' + activity.name + '\n活动代称：' + activity.key,
-                    'Url': self.url_ticket_detail(my_ticket.unique_id),
+                    'Title': '[' + activity.name + '] 抢票成功！',
+                    'Description': '活动名称：' + activity.name + '\n活动代称：' + activity.key + '\n请于活动开始时前往现场使用，您可以通过 [查票] 菜单查询电子票、或发送 [取票/退票 活动名称或代称] 查询或退票(・◇・)',
+                    'Url': self.url_ticket_detail(ticket.unique_id),
                 })
+            else:
+                return self.reply_text('此活动的电子票已经全部发出，没有抢到QwQ')
+        else:
+            my_ticket = my_ticket[0]
+            return self.reply_single_news({
+                'Title': '[' + activity.name + '] 电子票',
+                'Description': '活动名称：' + activity.name + '\n活动代称：' + activity.key,
+                'Url': self.url_ticket_detail(my_ticket.unique_id),
+            })
 
 
 class TicketDetailHandler(WeChatHandler):
@@ -214,6 +216,7 @@ class TicketDetailHandler(WeChatHandler):
                 activity = activity_2
             else:
                 return self.reply_text('找不到此活动Orz')
+            # 此时activity必定存在
             my_ticket = Ticket.get_by_activity_and_student_number(activity.id, self.user.student_id)
             if len(my_ticket) == 0:
                 return self.reply_text('您还没有此活动的票！Ծ‸Ծ')
