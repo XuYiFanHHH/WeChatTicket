@@ -53,7 +53,7 @@ class WeChatHandler(object):
 
     def reply_news(self, articles):
         if len(articles) > 10:
-            self.logger.warn('Reply with %d articles, keep only 10', len(articles))
+            self.logger.warning('Reply with %d articles, keep only 10', len(articles))
         return get_template('news.xml').render(self.get_context(
             Articles=articles[:10]
         ))
@@ -89,6 +89,12 @@ class WeChatHandler(object):
     def url_bind(self):
         return settings.get_url('u/bind', {'openid': self.user.open_id})
 
+    def url_activity_detail(self, act_id):
+        return settings.get_url('u/activity', {'id': act_id})
+
+    def url_ticket_detail(self, unique_id):
+        temp = unique_id
+        return settings.get_url('u/ticket', {'openid': self.user.open_id, 'ticket': unique_id})
 
 class WeChatEmptyHandler(WeChatHandler):
 
